@@ -4,7 +4,7 @@
     <title>Ghostty ReleaseSafe</title>
     <item>
       <title>Ghostty 1.4.0 (ReleaseSafe)</title>
-      <pubDate>Sat, 07 Nov 2026 15:36:18 +0000</pubDate>
+      <pubDate>Sat, 07 Nov 2026 16:04:34 +0000</pubDate>
       <sparkle:version>18457</sparkle:version>
       <sparkle:shortVersionString>1.4.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
@@ -19,7 +19,7 @@ Built with &lt;code&gt;-Doptimize=ReleaseSafe&lt;/code&gt; from commit
 Release notes: &lt;a href="https://ghostty.org/docs/install/release-notes/1-4-0"&gt;https://ghostty.org/docs/install/release-notes/1-4-0&lt;/a&gt;
 &lt;/p&gt;
 </description>
-      <enclosure url="https://github.com/filippo-agent/ghostty-releasesafe/releases/download/v1.4.0/Ghostty-1.4.0-ReleaseSafe.zip" type="application/octet-stream" sparkle:edSignature="ET5X5WUDQfTeRba1ib8yrzONwIbR16TnmATT0CxHp/rfOzWEgqTka8NpzKwM429xx1eujit/mHY6en52fbZVAg==" length="34262247" />
+      <enclosure url="https://github.com/filippo-agent/ghostty-releasesafe/releases/download/v1.4.0/Ghostty-1.4.0-ReleaseSafe.zip" type="application/octet-stream" sparkle:edSignature="FFxxVhB9/xq96vMZSKFPWipuv9On8S/HALLXB9A6kyByEGuenkhkx5MKamud9ilgeMO64fSoMKqKTVezvDlIBQ==" length="34261727" />
     </item>
   </channel>
 </rss>
