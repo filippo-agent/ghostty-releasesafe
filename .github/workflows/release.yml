@@ -193,16 +193,36 @@ jobs:
           cd macos
           xcodebuild -target Ghostty -configuration Release
 
-      - name: Check build mode
+      - name: Prepare entitlements
+        # Without a Team ID, which self-signed certificates lack, the hardened
+        # runtime's library validation refuses to load the bundled Sparkle
+        # framework. Disable just that, keeping the rest of the runtime.
+        run: |
+          cp macos/Ghostty.entitlements Ghostty.entitlements
+          /usr/libexec/PlistBuddy -c 'Add :com.apple.security.cs.disable-library-validation bool true' Ghostty.entitlements
+
+      - name: Check that the signed app launches
+        # Sign a copy ad hoc the way the publish job signs the release, which
+        # has the same library validation behavior, and launch it here, since
+        # the publish job must not run the build output.
         run: |
           set -euo pipefail
-          macos/build/Release/Ghostty.app/Contents/MacOS/ghostty +version | tee version.txt
+          app="$RUNNER_TEMP/Ghostty.app"
+          ditto macos/build/Release/Ghostty.app "$app"
+          sign() { codesign -f -s - -o runtime "$@"; }
+          sparkle="$app/Contents/Frameworks/Sparkle.framework"
+          sign "$sparkle/Versions/B/XPCServices/Downloader.xpc"
+          sign "$sparkle/Versions/B/XPCServices/Installer.xpc"
+          sign "$sparkle/Versions/B/Autoupdate"
+          sign "$sparkle/Versions/B/Updater.app"
+          sign "$sparkle"
+          sign "$app/Contents/PlugIns/DockTilePlugin.plugin"
+          sign --entitlements Ghostty.entitlements "$app"
+          "$app/Contents/MacOS/ghostty" +version | tee version.txt
           grep -qE '^ *- build mode *: \.safe$' version.txt
 
       - name: Archive app
-        run: |
-          ditto -c -k --keepParent macos/build/Release/Ghostty.app Ghostty-unsigned.zip
-          cp macos/Ghostty.entitlements Ghostty.entitlements
+        run: ditto -c -k --keepParent macos/build/Release/Ghostty.app Ghostty-unsigned.zip
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

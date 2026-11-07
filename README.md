@@ -31,7 +31,9 @@ Later versions arrive through Ghostty's updater, configured with the
 - The app is signed with a self-signed certificate instead of a Developer ID,
   and isn't notarized. The certificate is the same for every build, so macOS
   privacy permissions (like Accessibility for global keybinds) persist across
-  updates.
+  updates. Without a Team ID, the hardened runtime's library validation would
+  refuse to load Sparkle, so the app has the
+  `com.apple.security.cs.disable-library-validation` entitlement.
 
 The bundle identifier is unchanged, so these builds share configuration and
 preferences with official Ghostty builds. Don't install both.
