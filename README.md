@@ -22,7 +22,10 @@ Later versions arrive through Ghostty's updater, configured with the
 
 ## How the builds differ from upstream
 
-- The Zig core is built with `-Doptimize=ReleaseSafe`.
+- The Zig core is built with `-Doptimize=ReleaseSafe`, and without
+  translations (`-Di18n=false`), which would need gettext on the runner.
+- The build uses no binary caches: Zig is the official release, checked
+  against its minisign signature, instead of Ghostty's Nix environment.
 - The updater feed URL is patched to point at this repository's appcast.
 - Updates are signed with this repository's Sparkle EdDSA key.
 - The app is signed with a self-signed certificate instead of a Developer ID,

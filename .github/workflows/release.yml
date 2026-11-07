@@ -116,14 +116,50 @@ jobs:
           xcodebuild -version
           xcodebuild -downloadComponent MetalToolchain
 
-      - uses: DeterminateSystems/nix-installer-action@3138316df39ed29be04236d7ffc686fa525866aa # v23
-        with:
-          determinate: true
-
-      - uses: cachix/cachix-action@38b082610b782e7e93e209c35fd730d399dee866 # v17
-        with:
-          name: ghostty
-          skipPush: true
+      - name: Install Zig
+        # Install the Zig version that upstream requires for this tag, after
+        # checking the minisign signature of the official tarball.
+        env:
+          ZIG_PUBLIC_KEY: RWSGOq2NVecA2UPNdBUZykf1CCb147pkmdtYxgb3Ti+JO/wCYvhbAb/U
+        run: |
+          set -euo pipefail
+          version=$(sed -nE 's/^ *\.minimum_zig_version = "([0-9]+\.[0-9]+\.[0-9]+)",$/\1/p' build.zig.zon)
+          if [[ -z "$version" ]]; then
+            echo "::error::could not find minimum_zig_version in build.zig.zon"
+            exit 1
+          fi
+          name="zig-aarch64-macos-$version"
+          dir="$RUNNER_TEMP/zig"
+          mkdir -p "$dir"
+          curl -fsSL -o "$dir/$name.tar.xz" "https://ziglang.org/download/$version/$name.tar.xz"
+          curl -fsSL -o "$dir/$name.tar.xz.minisig" "https://ziglang.org/download/$version/$name.tar.xz.minisig"
+          python3 -I - "$ZIG_PUBLIC_KEY" "$dir/$name.tar.xz" <<'EOF'
+          import base64, hashlib, os, subprocess, sys, tempfile
+          pubkey, path = sys.argv[1:]
+          pk = base64.b64decode(pubkey)
+          _, sig_line, trusted_line, global_line = open(path + ".minisig").read().splitlines()[:4]
+          sig = base64.b64decode(sig_line)
+          trusted = trusted_line.removeprefix("trusted comment: ")
+          if pk[:2] != b"Ed" or sig[:2] != b"ED" or sig[2:10] != pk[2:10]:
+              sys.exit("unexpected signature algorithm or key")
+          def verify(message, signature):
+              with tempfile.TemporaryDirectory() as d:
+                  for name, data in [("pub", bytes.fromhex("302a300506032b6570032100") + pk[10:]),
+                                     ("msg", message), ("sig", signature)]:
+                      with open(f"{d}/{name}", "wb") as f:
+                          f.write(data)
+                  subprocess.run(["openssl", "pkeyutl", "-verify", "-pubin", "-inkey", f"{d}/pub",
+                                  "-keyform", "DER", "-rawin", "-in", f"{d}/msg", "-sigfile", f"{d}/sig"],
+                                 check=True, stdout=subprocess.DEVNULL)
+          with open(path, "rb") as f:
+              verify(hashlib.blake2b(f.read()).digest(), sig[10:])
+          verify(sig[10:] + trusted.encode(), base64.b64decode(global_line))
+          if "file:" + os.path.basename(path) not in trusted.split("\t"):
+              sys.exit(f"signature is for a different file: {trusted}")
+          EOF
+          tar -xf "$dir/$name.tar.xz" -C "$dir"
+          echo "$dir/$name" >> "$GITHUB_PATH"
+          "$dir/$name/zig" version
 
       - name: Point the updater at this repository's feed
         run: |
@@ -142,9 +178,11 @@ jobs:
 
       - name: Build GhosttyKit (ReleaseSafe)
         run: |
-          nix develop -c zig build \
+          zig build \
             -Doptimize=ReleaseSafe \
             -Demit-macos-app=false \
+            -Di18n=false \
+            -Demit-docs=false \
             -Dversion-string="$VERSION"
 
       - name: Build Ghostty.app
