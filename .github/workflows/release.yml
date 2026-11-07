@@ -176,6 +176,19 @@ jobs:
             exit 1
           fi
 
+      - name: Remove the debug build warning
+        # The macOS app shows a "debug build" banner in ReleaseSafe builds.
+        run: |
+          set -euo pipefail
+          f=macos/Sources/Features/Terminal/TerminalView.swift
+          old='Ghostty.info.mode == GHOSTTY_BUILD_MODE_DEBUG || Ghostty.info.mode == GHOSTTY_BUILD_MODE_RELEASE_SAFE'
+          grep -qF "$old" "$f"
+          sed -i '' "s/ || Ghostty.info.mode == GHOSTTY_BUILD_MODE_RELEASE_SAFE//" "$f"
+          if grep -rn 'GHOSTTY_BUILD_MODE_RELEASE_SAFE' macos/Sources; then
+            echo "::error::unexpected ReleaseSafe check"
+            exit 1
+          fi
+
       - name: Build GhosttyKit (ReleaseSafe)
         run: |
           zig build \
