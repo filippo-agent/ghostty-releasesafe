@@ -48,4 +48,5 @@ The certificate's common name must match `CERT_NAME` in the workflow.
 GitHub Pages serves the `gh-pages` branch.
 
 The build job runs upstream's build with no access to secrets. Signing and
-publishing happen in a separate job that only receives the built app bundle.
+publishing happen in a separate job that only receives the built app bundle,
+extracts it away from its own code, and rejects symlinks that point outside it.
