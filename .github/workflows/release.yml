@@ -29,6 +29,10 @@ jobs:
       actions: write
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.info.outputs.version }}
+      build: ${{ steps.info.outputs.build }}
+      commit: ${{ steps.info.outputs.commit }}
+      commit_long: ${{ steps.info.outputs.commit_long }}
     steps:
       - name: Keep the schedule enabled
         # GitHub disables scheduled workflows in repositories without recent
@@ -63,6 +67,24 @@ jobs:
           fi
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
 
+      # Release metadata is computed here rather than in the build job, which
+      # runs untrusted code that could rewrite its own outputs.
+      - name: Look up the tag
+        id: info
+        if: steps.tag.outputs.tag != ''
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          git clone -q --bare --filter=tree:0 https://github.com/ghostty-org/ghostty.git ghostty.git
+          commit=$(git -C ghostty.git rev-parse "refs/tags/$TAG^{commit}")
+          {
+            echo "version=${TAG#v}"
+            echo "build=$(git -C ghostty.git rev-list --count "$commit")"
+            echo "commit=$(git -C ghostty.git rev-parse --short "$commit")"
+            echo "commit_long=$commit"
+          } | tee -a "$GITHUB_OUTPUT"
+
   # The build job runs upstream build scripts and dependencies, so it gets
   # no secrets and a read-only token. Signing and publishing happen in a
   # separate job that only handles the built app bundle.
@@ -74,31 +96,14 @@ jobs:
     permissions:
       contents: read
     env:
-      TAG: ${{ needs.check.outputs.tag }}
-    outputs:
-      version: ${{ steps.info.outputs.version }}
-      build: ${{ steps.info.outputs.build }}
-      commit: ${{ steps.info.outputs.commit }}
-      commit_long: ${{ steps.info.outputs.commit_long }}
+      VERSION: ${{ needs.check.outputs.version }}
     steps:
       - name: Checkout Ghostty
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: ghostty-org/ghostty
-          ref: ${{ env.TAG }}
-          fetch-depth: 0
+          ref: ${{ needs.check.outputs.commit_long }}
           persist-credentials: false
-
-      - name: Build info
-        id: info
-        run: |
-          set -euo pipefail
-          {
-            echo "version=${TAG#v}"
-            echo "build=$(git rev-list --count HEAD)"
-            echo "commit=$(git rev-parse --short HEAD)"
-            echo "commit_long=$(git rev-parse HEAD)"
-          } | tee -a "$GITHUB_OUTPUT"
 
       - name: Select Xcode
         # Use the Xcode version from upstream's own release workflow for
@@ -136,8 +141,6 @@ jobs:
           fi
 
       - name: Build GhosttyKit (ReleaseSafe)
-        env:
-          VERSION: ${{ steps.info.outputs.version }}
         run: |
           nix develop -c zig build \
             -Doptimize=ReleaseSafe \
@@ -176,10 +179,10 @@ jobs:
       contents: write
     env:
       TAG: ${{ needs.check.outputs.tag }}
-      VERSION: ${{ needs.build.outputs.version }}
-      BUILD: ${{ needs.build.outputs.build }}
-      COMMIT: ${{ needs.build.outputs.commit }}
-      COMMIT_LONG: ${{ needs.build.outputs.commit_long }}
+      VERSION: ${{ needs.check.outputs.version }}
+      BUILD: ${{ needs.check.outputs.build }}
+      COMMIT: ${{ needs.check.outputs.commit }}
+      COMMIT_LONG: ${{ needs.check.outputs.commit_long }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
