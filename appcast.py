@@ -1,19 +1,21 @@
 """
 Adds a release to the Sparkle appcast.
 
-Usage: appcast.py SIGN_UPDATE_OUTPUT APPCAST
+Usage: appcast.py SIGN_UPDATE_OUTPUT INFO_PLIST APPCAST
 
 SIGN_UPDATE_OUTPUT is the output of Sparkle's sign_update for the archive,
-like `sparkle:edSignature="..." length="..."`. APPCAST is updated in place,
-and created if it doesn't exist.
+like `sparkle:edSignature="..." length="..."`. INFO_PLIST is the app's
+Info.plist, which provides the minimum system version. APPCAST is updated in
+place, and created if it doesn't exist.
 
-The release is described by the VERSION, BUILD, COMMIT, COMMIT_LONG,
-DOWNLOAD_URL, and MINIMUM_SYSTEM_VERSION environment variables.
+The release is described by the VERSION, BUILD, COMMIT, COMMIT_LONG, and
+DOWNLOAD_URL environment variables.
 
 Based on dist/macos/update_appcast_tag.py from Ghostty (MIT license).
 """
 
 import os
+import plistlib
 import shlex
 import sys
 import xml.etree.ElementTree as ET
@@ -24,13 +26,14 @@ NS = {"sparkle": SPARKLE}
 PUBDATE_FORMAT = "%a, %d %b %Y %H:%M:%S %z"
 KEEP_ITEMS = 15
 
-sign_update_path, appcast_path = sys.argv[1:]
+sign_update_path, info_plist_path, appcast_path = sys.argv[1:]
 version = os.environ["VERSION"]
 build = os.environ["BUILD"]
 commit = os.environ["COMMIT"]
 commit_long = os.environ["COMMIT_LONG"]
 download_url = os.environ["DOWNLOAD_URL"]
-minimum_system_version = os.environ["MINIMUM_SYSTEM_VERSION"]
+with open(info_plist_path, "rb") as f:
+    minimum_system_version = plistlib.load(f)["LSMinimumSystemVersion"]
 now = datetime.now(timezone.utc)
 
 with open(sign_update_path) as f:

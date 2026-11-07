@@ -284,7 +284,6 @@ jobs:
           sig=$(echo "$SPARKLE_PRIVATE_KEY" | sparkle/bin/sign_update --ed-key-file - -p "$zip")
           echo "$SPARKLE_PRIVATE_KEY" | sparkle/bin/sign_update --ed-key-file - --verify "$zip" "$sig"
           echo "zip=$zip" >> "$GITHUB_OUTPUT"
-          echo "minimum_system_version=$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' app/Ghostty.app/Contents/Info.plist)" >> "$GITHUB_OUTPUT"
 
       - name: Create release
         env:
@@ -306,13 +305,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           ZIP: ${{ steps.archive.outputs.zip }}
-          MINIMUM_SYSTEM_VERSION: ${{ steps.archive.outputs.minimum_system_version }}
         run: |
           set -euo pipefail
           gh auth setup-git
           git clone --depth 1 --branch gh-pages "https://github.com/${GITHUB_REPOSITORY}.git" pages
           export DOWNLOAD_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/${ZIP}"
-          python3 self/appcast.py sign_update.txt pages/appcast.xml
+          python3 -I self/appcast.py sign_update.txt app/Ghostty.app/Contents/Info.plist pages/appcast.xml
           cd pages
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
