@@ -153,7 +153,7 @@ jobs:
         run: |
           set -euo pipefail
           macos/build/Release/Ghostty.app/Contents/MacOS/ghostty +version | tee version.txt
-          grep -q 'ReleaseSafe' version.txt
+          grep -qE '^ *- build mode *: \.safe$' version.txt
 
       - name: Archive app
         run: |
